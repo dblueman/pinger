@@ -1,7 +1,8 @@
 package pinger
 
 import (
-   "math/rand"
+   "crypto/rand"
+   "encoding/binary"
    "net"
    "os"
    "time"
@@ -28,6 +29,16 @@ var (
    conn *icmp.PacketConn
 )
 
+func randShort() (int, error) {
+   var b [2]byte
+   _, err := rand.Read(b[:])
+   if err != nil {
+      return -1, err
+   }
+
+   return int(binary.BigEndian.Uint16(b[:])), nil
+}
+
 func NewPinger(target string, timeout time.Duration) (*Pinger, error) {
    var err error
 
@@ -44,7 +55,12 @@ func NewPinger(target string, timeout time.Duration) (*Pinger, error) {
 	}
 
    udpaddr := net.UDPAddr{IP: net.ParseIP(target)}
-   return &Pinger{target: target, udpaddr: udpaddr, timeout: timeout, msg: msg, id: rand.Int()}, nil
+   id, err := randShort()
+   if err != nil {
+      return nil, err
+   }
+
+   return &Pinger{target: target, udpaddr: udpaddr, timeout: timeout, msg: msg, id: id}, nil
 }
 
 func (p *Pinger) Ping() (bool, error) {
