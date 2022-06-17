@@ -6,7 +6,7 @@ import (
 )
 
 func Test(t *testing.T) {
-   p, err := NewPinger("127.0.0.1", time.Millisecond * 900)
+   p, err := NewPinger("localhost", time.Millisecond * 900)
    if err != nil {
       t.Fatal(err)
    }
@@ -18,7 +18,7 @@ func Test(t *testing.T) {
       }
 
       if !resp {
-         t.Error("localhost didn't ping")
+         t.Fatal("no reply")
       }
    }
 

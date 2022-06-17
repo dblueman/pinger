@@ -3,6 +3,7 @@ package pinger
 import (
    "crypto/rand"
    "encoding/binary"
+   "fmt"
    "net"
    "os"
    "time"
@@ -54,13 +55,24 @@ func NewPinger(target string, timeout time.Duration) (*Pinger, error) {
       Code: 0,
 	}
 
-   udpaddr := net.UDPAddr{IP: net.ParseIP(target)}
+   ips, err := net.LookupIP(target)
+   if err != nil {
+      return nil, err
+   }
+
+   if len(ips) == 0 {
+      return nil, fmt.Errorf("No IP addreses for %s!", target)
+   }
+
+   ip := ips[0]
+
+   udpaddr := net.UDPAddr{IP: ip}
    id, err := randShort()
    if err != nil {
       return nil, err
    }
 
-   return &Pinger{target: target, udpaddr: udpaddr, timeout: timeout, msg: msg, id: id}, nil
+   return &Pinger{target: ip.String(), udpaddr: udpaddr, timeout: timeout, msg: msg, id: id}, nil
 }
 
 func (p *Pinger) Ping() (bool, error) {
