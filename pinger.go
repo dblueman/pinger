@@ -24,6 +24,7 @@ type Pinger struct {
 
 const (
    protocolICMP = 1
+   Timeout      = time.Duration(0)
 )
 
 var (
@@ -40,7 +41,7 @@ func randShort() (int, error) {
    return int(binary.BigEndian.Uint16(b[:])), nil
 }
 
-func NewPinger(target string, timeout time.Duration) (*Pinger, error) {
+func New(target string, timeout time.Duration) (*Pinger, error) {
    var err error
 
    if conn == nil {
@@ -75,7 +76,7 @@ func NewPinger(target string, timeout time.Duration) (*Pinger, error) {
    return &Pinger{target: ip.String(), udpaddr: udpaddr, timeout: timeout, msg: msg, id: id}, nil
 }
 
-func (p *Pinger) Ping() (bool, error) {
+func (p *Pinger) Ping() (time.Duration, error) {
    p.seq++
 
    p.msg.Body = &icmp.Echo{
@@ -86,27 +87,28 @@ func (p *Pinger) Ping() (bool, error) {
 
    wb, err := p.msg.Marshal(nil)
    if err != nil {
-      return false, fmt.Errorf("Ping: %w", err)
+      return Timeout, fmt.Errorf("Ping: %w", err)
    }
 
    _, err = conn.WriteTo(wb, &p.udpaddr)
    if err != nil {
-      return false, fmt.Errorf("Ping: %w", err)
+      return Timeout, fmt.Errorf("Ping: %w", err)
    }
 
+   t0 := time.Now()
    err = conn.SetReadDeadline(time.Now().Add(p.timeout))
    if err != nil {
-      return false, fmt.Errorf("Ping: %w", err)
+      return Timeout, fmt.Errorf("Ping: %w", err)
    }
 
    for {
       n, peer, err := conn.ReadFrom(p.buf[:])
       if err != nil {
          if os.IsTimeout(err) {
-            return false, nil
+            return Timeout, nil
          }
 
-         return false, fmt.Errorf("Ping: %w", err)
+         return Timeout, fmt.Errorf("Ping: %w", err)
       }
 
       if peer.String() != p.target+":0" {
@@ -115,11 +117,11 @@ func (p *Pinger) Ping() (bool, error) {
 
       msg, err := icmp.ParseMessage(protocolICMP, p.buf[:n])
       if err != nil {
-         return false, fmt.Errorf("Ping: %w", err)
+         return Timeout, fmt.Errorf("Ping: %w", err)
       }
 
       if msg.Type == ipv4.ICMPTypeEchoReply {
-         return true, nil
+         return time.Since(t0), nil
       }
    }
 }

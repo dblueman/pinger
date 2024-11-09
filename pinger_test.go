@@ -6,7 +6,7 @@ import (
 )
 
 func Test(t *testing.T) {
-   p, err := NewPinger("localhost", time.Millisecond * 900)
+   p, err := New("localhost", time.Millisecond * 900)
    if err != nil {
       t.Fatal(err)
    }
@@ -17,12 +17,12 @@ func Test(t *testing.T) {
          t.Error(err)
       }
 
-      if !resp {
+      if resp == Timeout {
          t.Fatal("no reply")
       }
    }
 
-   p, err = NewPinger("128.0.0.1", time.Millisecond * 900)
+   p, err = New("128.0.0.1", time.Millisecond * 900)
    if err != nil {
       t.Fatal(err)
    }
@@ -33,7 +33,7 @@ func Test(t *testing.T) {
          t.Error(err)
       }
 
-      if resp {
+      if resp != Timeout {
          t.Error("unexpected response")
       }
    }
